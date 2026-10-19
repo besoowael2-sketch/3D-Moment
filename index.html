@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="author" content="BASEL">
 <title>For Someone ❤️</title>
 <style>
@@ -67,6 +68,8 @@ p{color: rgb(253, 8, 180);
 font-size: 140%;}
 h3{color: rgb(228, 10, 134);
 font-size: 180%;}
+
+*{box-sizing:border-box}html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden;overscroll-behavior:none}canvas{display:block;width:100%;height:100%;touch-action:none}#introText{padding:calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));line-height:1.6;overflow-wrap:anywhere}#cardPopup{max-width:calc(100vw - 24px);max-height:calc(100svh - 24px);box-sizing:border-box}@media(max-width:700px){#introText{font-size:clamp(17px,5vw,24px);padding:24px 18px;line-height:1.65}#cardPopup{width:min(270px,calc(100vw - 32px));height:min(340px,calc(100svh - 36px));right:16px;left:16px;margin-inline:auto;bottom:-110%;overflow:visible}#cardPopup.open{bottom:calc(16px + env(safe-area-inset-bottom))!important}#cardPopup h3{font-size:clamp(17px,5vw,23px);margin:0 0 8px;text-align:center}#cardPopup p{font-size:clamp(13px,3.7vw,16px);line-height:1.45;margin:8px 0}.cardBack{padding:12px}}@media(max-height:560px) and (max-width:900px){#cardPopup{height:calc(100svh - 20px);width:min(230px,calc(100vw - 24px))}#cardPopup.open{bottom:10px!important}#cardPopup h3{font-size:16px}#cardPopup p{font-size:12px}}
 </style>
 </head>
 <body>
@@ -119,7 +122,7 @@ document.getElementById("introText").style.display="none";
 scene = new THREE.Scene();
 
 // إنشاء الكاميرا
-const camera = new THREE.PerspectiveCamera(
+camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   0.1,
@@ -128,7 +131,8 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 5, 11);
 
 // إنشاء الـ renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "default" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -139,6 +143,7 @@ document.body.appendChild(renderer.domElement);
 window.addEventListener('resize', () => {
   // تحديث حجم الـ renderer
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
 
   // تحديث aspect للكاميرا
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -152,11 +157,13 @@ function animate() {
 }
 animate();
 
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0); // الكاميرا تبص لنقطة مركزية
 controls.update();
-controls.enablePan = true;   // تسمح لك بالتحريك يمين وشمال
+controls.enablePan = window.matchMedia("(min-width: 701px)").matches;
 controls.enableZoom = true;  // تكبير وتصغير
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
 controls.enableRotate = true; // تدوير الكاميرا حوالين الهدف
 controls.target.set(0, -2.5, 0); // ممكن تحط مركز الطاولة أو التورتة
 controls.update();
@@ -349,13 +356,7 @@ loader.load("cake.glb", function(gltf) {
     controls.update();
 
     // الدوران المستمر
-    function animateCake() {
-        requestAnimationFrame(animateCake);
-        cake.rotation.y += 0.01; // الدوران حول نفسه
-        renderer.render(scene, camera);
-        controls.update();
-    }
-    animateCake();
+    cake.userData.isRotating = true;
 });
 
 function createFrame(x, y, z, imagePath){
@@ -438,7 +439,7 @@ const cardTexture = textureLoader.load('teddy.png');
 
 const cardMat = new THREE.MeshStandardMaterial({ map: cardTexture });
 
-const card = new THREE.Mesh(cardGeo, cardMat);
+card = new THREE.Mesh(cardGeo, cardMat);
 
 // وضع الكارت: نزلناه تحت ولفناه على ظهره
 card.position.set(3.5, -2.5, 4.1);
@@ -447,12 +448,12 @@ card.rotation.z =Math.PI /1;
 
 scene.add(card);
 
-window.addEventListener("click",function(event){
+window.addEventListener("pointerdown",function(event){
     // 🎵 تشغيل الموسيقى مرة واحدة
 if(!musicStarted){
     const music = document.getElementById("bgMusic");
     music.volume = 0.5;
-    music.play();
+    music.play().catch(() => {});
     musicStarted = true;
 
     // 🎆 بدء الألعاب النارية
@@ -481,13 +482,13 @@ if(intersects.length > 0){
 
         // 🔄 يقفل
         inner.style.transform = "rotateY(0deg)";
-        popup.style.bottom = "-300px";
+        popup.style.bottom = window.matchMedia("(max-width: 700px)").matches ? "-110%" : "-450px";
         popup.classList.remove("open");
 
     } else {
 
         // 🟤 يطلع من الأرض
-        popup.style.bottom = "180px";
+        popup.style.bottom = window.matchMedia("(max-width: 700px)").matches ? "calc(16px + env(safe-area-inset-bottom))" : "180px";
 
         // ⏳ نستنى شوية وبعدين نفتحه
         setTimeout(()=>{
@@ -505,12 +506,9 @@ animate();
 function animate(){
     requestAnimationFrame(animate);
 
-    stars.rotation.y += 0.0007;
-    stars.rotation.x += 0.0002;
-
-    updateFireworks(); // 🎆🔥
-
-    renderer.render(scene,camera);
+    if (scene) scene.traverse((object) => { if (object.userData && object.userData.isRotating) object.rotation.y += 0.01; });
+    if (controls) controls.update();
+    if (renderer && scene && camera) renderer.render(scene,camera);
 }
 
 
